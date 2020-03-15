@@ -24,9 +24,6 @@ jobs:
       - name: Run PyInstaller
         run: |
           python -m PyInstaller.__main__ -F -w -n ESPHome-Flasher -i icon.ico esphomeflasher\__main__.py
-      - uses: montudor/action-zip@v0.1.0
-        with:
-          args: zip -qq -r ./fujinet-flash-win64.zip ./dist/ESPHome-Flasher.exe
       - uses: actions/upload-artifact@master
         with:
           name: Windows
@@ -48,8 +45,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-          asset_path: ./fujinet-flash-win64.zip
-          asset_name: fujinet-flash-win64.zip
+          asset_path: ./windows.zip
+          asset_name: windows.zip
           asset_content_type: application/zip
   build-windows-x86:
     runs-on: windows-latest
