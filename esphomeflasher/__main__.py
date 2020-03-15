@@ -12,7 +12,7 @@ from esphomeflasher import const
 from esphomeflasher.common import ESP32ChipInfo, EsphomeflasherError, chip_run_stub, \
     configure_write_flash_args, detect_chip, detect_flash_size, read_chip_info
 from esphomeflasher.const import ESP32_DEFAULT_BOOTLOADER_FORMAT, ESP32_DEFAULT_OTA_DATA, \
-    ESP32_DEFAULT_PARTITIONS
+    ESP32_DEFAULT_PARTITIONS, ESP32_DEFAULT_FIRMWARE, ESP32_DEFAULT_SPIFFS
 from esphomeflasher.helpers import list_serial_ports
 
 
@@ -34,11 +34,15 @@ def parse_args(argv):
     parser.add_argument('--otadata',
                         help="(ESP32-only) The otadata file to flash.",
                         default=ESP32_DEFAULT_OTA_DATA)
+    parser.add_argument('--spiffs',
+                        help="(ESP32-only) The SPIFFS file to flash.",
+                        default=ESP32_DEFAULT_SPIFFS)
     parser.add_argument('--no-erase',
                         help="Do not erase flash before flashing",
                         action='store_true')
     parser.add_argument('--show-logs', help="Only show logs", action='store_true')
-    parser.add_argument('binary', help="The binary image to flash.")
+    parser.add_argument('binary', help="The binary image to flash.",
+                        default=ESP32_DEFAULT_FIRMWARE)
 
     return parser.parse_args(argv[1:])
 
@@ -88,10 +92,22 @@ def run_esphomeflasher(argv):
         show_logs(serial_port)
         return
 
-    try:
+    if args.binary:
         firmware = open(args.binary, 'rb')
-    except IOError as err:
-        raise EsphomeflasherError("Error opening binary: {}".format(err))
+    else:
+        print("Using latest firmware from fujinet.online..")
+        #args.binary = ESP32_DEFAULT_FIRMWARE
+        firmware = "fujinet"
+    
+#    try:
+#       firmware = open(args.binary, 'rb')
+#    except IOError as err:
+#        raise EsphomeflasherError("Error opening binary: {}".format(err))
+#    else:
+#        print("Using latest firmware from fujinet.online..")
+#        args.binary = ESP32_DEFAULT_FIRMWARE
+#        firmware = open(args.binary, 'rb')
+
     chip = detect_chip(port, args.esp8266, args.esp32)
     info = read_chip_info(chip)
 
@@ -124,7 +140,7 @@ def run_esphomeflasher(argv):
 
     mock_args = configure_write_flash_args(info, firmware, flash_size,
                                            args.bootloader, args.partitions,
-                                           args.otadata)
+                                           args.otadata, args.spiffs)
 
     print(" - Flash Mode: {}".format(mock_args.flash_mode))
     print(" - Flash Frequency: {}Hz".format(mock_args.flash_freq.upper()))
