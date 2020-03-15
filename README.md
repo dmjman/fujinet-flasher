@@ -1,4 +1,4 @@
-# esphomeflasher
+# esphomeflasher (for FujiNet)
 
 esphomeflasher is a utility app for the [esphomelib](https://esphomelib.com/esphomeyaml/index.html)
 framework and is designed to make flashing ESPs with esphomelib as simple as possible by:
