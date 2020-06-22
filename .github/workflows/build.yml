@@ -55,6 +55,10 @@ jobs:
         with:
           name: Windows-x86
           path: dist/FujiNet-Flasher.exe
+      - uses: actions/upload-artifact@master
+        with:
+          name: Warnings-x86
+          path: build\FujiNet-Flasher\warn-FujiNet-Flasher.txt
 
 #  build-ubuntu:
 #    runs-on: ubuntu-latest
