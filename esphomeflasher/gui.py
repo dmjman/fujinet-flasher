@@ -217,8 +217,8 @@ class MainFrame(wx.Frame):
         reload_button.Bind(wx.EVT_BUTTON, on_reload)
         reload_button.SetToolTip("Reload serial device list")
 
-        file_picker = wx.FilePickerCtrl(panel, style=wx.FLP_USE_TEXTCTRL)
-        file_picker.Bind(wx.EVT_FILEPICKER_CHANGED, on_pick_file)
+#        file_picker = wx.FilePickerCtrl(panel, style=wx.FLP_USE_TEXTCTRL)
+#        file_picker.Bind(wx.EVT_FILEPICKER_CHANGED, on_pick_file)
 
         serial_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
         serial_boxsizer.Add(self.choice, 1, wx.EXPAND)
@@ -239,7 +239,7 @@ class MainFrame(wx.Frame):
         self.console_ctrl.SetDefaultStyle(wx.TextAttr(wx.WHITE))
 
         port_label = wx.StaticText(panel, label="Serial port")
-        file_label = wx.StaticText(panel, label="Firmware")
+#        file_label = wx.StaticText(panel, label="Firmware")
 
         console_label = wx.StaticText(panel, label="Console")
 
@@ -247,7 +247,8 @@ class MainFrame(wx.Frame):
             # Port selection row
             port_label, (serial_boxsizer, 1, wx.EXPAND),
             # Firmware selection row (growable)
-            file_label, (file_picker, 1, wx.EXPAND),
+ #           file_label, (file_picker, 1, wx.EXPAND),
+            (wx.StaticText(panel, label="")), (wx.StaticText(panel, label="")),
             # Flash ESP button
             (wx.StaticText(panel, label="")), (button, 1, wx.EXPAND),
             # View Logs button
@@ -281,9 +282,9 @@ class MainFrame(wx.Frame):
 class App(wx.App, wx.lib.mixins.inspection.InspectionMixin):
     def OnInit(self):
         wx.SystemOptions.SetOption("mac.window-plain-transition", 1)
-        self.SetAppName("esphome-flasher (Based on NodeMCU PyFlasher)")
+        self.SetAppName("fujinet-flasher (Based on esphome/NodeMCU PyFlasher)")
 
-        frame = MainFrame(None, "esphome-flasher (Based on NodeMCU PyFlasher)")
+        frame = MainFrame(None, "fujinet-flasher (Based on esphome/NodeMCU PyFlasher)")
         frame.Show()
 
         return True
