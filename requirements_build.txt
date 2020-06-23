@@ -1,4 +1,4 @@
-wxpython>=4.0,<5.0
+wxPython==4.0.7.post2
 esptool==2.8
 requests>=2.0,<3
 pyinstaller
