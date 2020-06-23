@@ -26,7 +26,7 @@ jobs:
           python -m PyInstaller.__main__ -F -w -n FujiNet-Flasher -i icon.ico esphomeflasher\__main__.py
       - uses: actions/upload-artifact@master
         with:
-          name: Windows
+          name: Windows-x64
           path: dist/FujiNet-Flasher.exe
   build-windows-x86:
     runs-on: windows-latest
@@ -55,10 +55,6 @@ jobs:
         with:
           name: Windows-x86
           path: dist/FujiNet-Flasher.exe
-      - uses: actions/upload-artifact@master
-        with:
-          name: Warnings-x86
-          path: build\FujiNet-Flasher\warn-FujiNet-Flasher.txt
 
 #  build-ubuntu:
 #    runs-on: ubuntu-latest
@@ -117,4 +113,4 @@ jobs:
       - uses: actions/upload-artifact@master
         with:
           name: MacOS
-          path: dist/FujiNet-Flasher.app
+          path: dist/*
