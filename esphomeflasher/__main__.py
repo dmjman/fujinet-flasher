@@ -4,6 +4,7 @@ import argparse
 from datetime import datetime
 import sys
 import time
+from esphomeflasher.common import open_downloadable_binary
 
 import esptool
 import serial
@@ -96,8 +97,9 @@ def run_esphomeflasher(argv):
         firmware = open(args.binary, 'rb')
     else:
         print("Using latest firmware from fujinet.online..")
-        #args.binary = ESP32_DEFAULT_FIRMWARE
-        firmware = "fujinet"
+ #       args.binary = ESP32_DEFAULT_FIRMWARE
+ #       firmware = "fujinet"
+        firmware = open_downloadable_binary(ESP32_DEFAULT_FIRMWARE)
     
 #    try:
 #       firmware = open(args.binary, 'rb')

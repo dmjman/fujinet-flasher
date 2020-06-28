@@ -2,8 +2,8 @@ import re
 
 __version__ = "1.2.0"
 
+ESP32_DEFAULT_BOOTLOADER_FORMAT = 'https://fujinet.online/firmware/bootloader.bin'
 ESP32_DEFAULT_OTA_DATA = 'https://fujinet.online/firmware/boot_app0.bin'
-ESP32_DEFAULT_BOOTLOADER_FORMAT = 'https://fujinet.online/firmware/bootloader_$FLASH_MODE$_$FLASH_FREQ$.bin'
 ESP32_DEFAULT_PARTITIONS = 'https://fujinet.online/firmware/partitions.bin'
 ESP32_DEFAULT_FIRMWARE = 'https://fujinet.online/firmware/firmware.bin'
 ESP32_DEFAULT_SPIFFS = 'https://fujinet.online/firmware/spiffs.bin'

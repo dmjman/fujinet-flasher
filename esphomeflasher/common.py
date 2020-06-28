@@ -168,10 +168,10 @@ def configure_write_flash_args(info, firmware_path, flash_size,
                                otadata_path, spiffs_path):
     addr_filename = []
     
-    if firmware_path == "fujinet":
-        firmware = open_downloadable_binary(ESP32_DEFAULT_FIRMWARE)
-    else:
-        firmware = open_downloadable_binary(firmware_path)
+#    if firmware_path == "fujinet":
+#        firmware = open_downloadable_binary(ESP32_DEFAULT_FIRMWARE)
+#    else:
+    firmware = open_downloadable_binary(firmware_path)
 
     # print("Firware path: ", firmware_path)
     print("Firware path: Latest from fujinet.online")
