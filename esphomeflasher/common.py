@@ -174,7 +174,7 @@ def configure_write_flash_args(info, firmware_path, flash_size,
     firmware = open_downloadable_binary(firmware_path)
 
     # print("Firware path: ", firmware_path)
-    print("Firware path: Latest from fujinet.online")
+    print(" - Firware path: Latest from fujinet.online")
     flash_mode, flash_freq = read_firmware_info(firmware)
     if isinstance(info, ESP32ChipInfo):
         if flash_freq in ('26m', '20m'):

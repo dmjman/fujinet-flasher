@@ -89,7 +89,7 @@ def run_esphomeflasher(argv):
     port = select_port(args)
 
     if args.show_logs:
-        serial_port = serial.Serial(port, baudrate=115200)
+        serial_port = serial.Serial(port, baudrate=921600)
         show_logs(serial_port)
         return
 
@@ -100,7 +100,7 @@ def run_esphomeflasher(argv):
  #       args.binary = ESP32_DEFAULT_FIRMWARE
  #       firmware = "fujinet"
         firmware = open_downloadable_binary(ESP32_DEFAULT_FIRMWARE)
-    
+
 #    try:
 #       firmware = open(args.binary, 'rb')
 #    except IOError as err:
