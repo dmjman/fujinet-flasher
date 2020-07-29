@@ -1,0 +1,118 @@
+on: [push]
+
+name: Create Release
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Install Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: '3.7'
+          architecture: 'x64'
+      - name: Print Versions
+        run: |
+          python --version
+          pip --version
+      - name: Install requirements
+        run: |
+          pip install -r requirements_build.txt
+          pip install -e .
+      - name: Run PyInstaller
+        run: |
+          python -m PyInstaller.__main__ -F -w -n FujiNet-Flasher -i icon.ico esphomeflasher\__main__.py
+      - uses: actions/upload-artifact@master
+        with:
+          name: FujiNet-Flasher_win-x64
+          path: dist/FujiNet-Flasher.exe
+  build-windows-x86:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Install Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: '3.7'
+          architecture: 'x86'
+      - name: Print Versions
+        run: |
+          python --version
+          pip --version
+      - name: Install requirements
+        run: |
+          pip install -r requirements_build.txt
+          pip install -e .
+      - name: Run PyInstaller
+        run: |
+          python -m PyInstaller.__main__ -F -w -n FujiNet-Flasher -i icon.ico esphomeflasher\__main__.py
+      - name: See dist directory
+        run: ls dist
+      - uses: actions/upload-artifact@master
+        with:
+          name: FujiNet-Flasher_win-x86
+          path: dist/FujiNet-Flasher.exe
+
+#  build-ubuntu:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v1
+#      - name: Install Python
+#        uses: actions/setup-python@v1
+#        with:
+#          python-version: '3.7'
+#      - name: Install dependencies
+#        run: |
+#          sudo apt install python-wxgtk3.0 build-essential libgtk-3-dev
+#      - name: Print Versions
+#        run: |
+#          python --version
+#          pip --version
+#      - name: Install requirements
+#        run: |
+#          pip install pathlib2
+#          pip install -r requirements_build.txt
+#          pip install -e .
+#      - name: Run PyInstaller
+#        run: |
+#          python -m PyInstaller.__main__ -F -w -n ESPHome-Flasher -i icon.ico esphomeflasher/__main__.py
+#      - name: See dist directory
+#        run: ls dist
+#      - uses: actions/upload-artifact@master
+#        with:
+#          name: Ubuntu
+#          path: dist
+
+
+  build-macos:
+    runs-on: macOS-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Install Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: '3.7'
+      - name: Print Versions
+        run: |
+          python --version
+          pip --version
+      - name: Install requirements
+        run: |
+          pip install -r requirements_build.txt
+          pip install -e .
+      - name: Run PyInstaller
+        run: |
+          python -m PyInstaller.__main__ -F -w -n FujiNet-Flasher -i icon.icns esphomeflasher/__main__.py
+      - name: Remove Extra Binary
+        run: rm dist/FujiNet-Flasher
+      - name: See dist directory
+        run: ls dist
+      - uses: actions/upload-artifact@master
+        with:
+          name: FujiNet-Flasher_macos
+          path: dist/*
