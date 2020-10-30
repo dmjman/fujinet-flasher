@@ -5,8 +5,8 @@ import esptool
 
 from esphomeflasher.const import HTTP_REGEX
 from esphomeflasher.const import ESP32_DEFAULT_FIRMWARE
+from esphomeflasher.const import FUJINET_VERSION_URL
 from esphomeflasher.helpers import prevent_print
-
 
 class EsphomeflasherError(Exception):
     pass
@@ -158,6 +158,21 @@ def open_downloadable_binary(path):
     except IOError as err:
         raise EsphomeflasherError("Error opening binary '{}': {}".format(path, err))
 
+def fujinet_version_info():
+    from urllib.request import urlopen
+
+    data = urlopen(FUJINET_VERSION_URL)
+    version = ""
+    counter = 0
+
+    for line in data:
+        if counter < 3:
+            version += line.decode('us-ascii')
+            counter += 1
+        else:
+            break
+
+    return version
 
 def format_bootloader_path(path, flash_mode, flash_freq):
     return path.replace('$FLASH_MODE$', flash_mode).replace('$FLASH_FREQ$', flash_freq)
@@ -168,13 +183,9 @@ def configure_write_flash_args(info, firmware_path, flash_size,
                                otadata_path, spiffs_path):
     addr_filename = []
     
-#    if firmware_path == "fujinet":
-#        firmware = open_downloadable_binary(ESP32_DEFAULT_FIRMWARE)
-#    else:
     firmware = open_downloadable_binary(firmware_path)
 
-    # print("Firware path: ", firmware_path)
-    print(" - Firware path: Latest from fujinet.online")
+    print(" - Firware path: fujinet.online")
     flash_mode, flash_freq = read_firmware_info(firmware)
     if isinstance(info, ESP32ChipInfo):
         if flash_freq in ('26m', '20m'):

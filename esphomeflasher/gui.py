@@ -10,6 +10,7 @@ import wx.lib.inspection
 import wx.lib.mixins.inspection
 
 from esphomeflasher.helpers import list_serial_ports
+from esphomeflasher.common import fujinet_version_info
 
 
 COLOR_RE = re.compile(r'(?:\033)(?:\[(.*?)[@-~]|\].*?(?:\007|\033\\))')
@@ -217,9 +218,6 @@ class MainFrame(wx.Frame):
         reload_button.Bind(wx.EVT_BUTTON, on_reload)
         reload_button.SetToolTip("Reload serial device list")
 
-#        file_picker = wx.FilePickerCtrl(panel, style=wx.FLP_USE_TEXTCTRL)
-#        file_picker.Bind(wx.EVT_FILEPICKER_CHANGED, on_pick_file)
-
         serial_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
         serial_boxsizer.Add(self.choice, 1, wx.EXPAND)
         serial_boxsizer.AddStretchSpacer(0)
@@ -238,20 +236,18 @@ class MainFrame(wx.Frame):
         self.console_ctrl.SetForegroundColour(wx.WHITE)
         self.console_ctrl.SetDefaultStyle(wx.TextAttr(wx.WHITE))
 
-        port_label = wx.StaticText(panel, label="Serial port")
-#        file_label = wx.StaticText(panel, label="Firmware")
-
-        console_label = wx.StaticText(panel, label="Console")
+        port_label = wx.StaticText(panel, label="Serial port:")
+        version_label = wx.StaticText(panel, label="Latest Version:")
+        console_label = wx.StaticText(panel, label="Console:")
 
         fgs.AddMany([
             # Port selection row
             port_label, (serial_boxsizer, 1, wx.EXPAND),
-            # Firmware selection row (growable)
- #           file_label, (file_picker, 1, wx.EXPAND),
-            (wx.StaticText(panel, label="")), (wx.StaticText(panel, label="")),
+            # Firmware version information
+            version_label, (wx.StaticText(panel, label=fujinet_version_info())),
             # Flash ESP button
             (wx.StaticText(panel, label="")), (button, 1, wx.EXPAND),
-            # View Logs button
+            # Debug output button
             (wx.StaticText(panel, label="")), (logs_button, 1, wx.EXPAND),
             # Console View (growable)
             (console_label, 1, wx.EXPAND), (self.console_ctrl, 1, wx.EXPAND),

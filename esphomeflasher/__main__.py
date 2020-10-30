@@ -5,6 +5,7 @@ from datetime import datetime
 import sys
 import time
 from esphomeflasher.common import open_downloadable_binary
+from esphomeflasher.common import fujinet_version_info
 
 import esptool
 import serial
@@ -93,22 +94,9 @@ def run_esphomeflasher(argv):
         show_logs(serial_port)
         return
 
-    if args.binary:
-        firmware = open(args.binary, 'rb')
-    else:
-        print("Using latest firmware from fujinet.online..")
- #       args.binary = ESP32_DEFAULT_FIRMWARE
- #       firmware = "fujinet"
-        firmware = open_downloadable_binary(ESP32_DEFAULT_FIRMWARE)
-
-#    try:
-#       firmware = open(args.binary, 'rb')
-#    except IOError as err:
-#        raise EsphomeflasherError("Error opening binary: {}".format(err))
-#    else:
-#        print("Using latest firmware from fujinet.online..")
-#        args.binary = ESP32_DEFAULT_FIRMWARE
-#        firmware = open(args.binary, 'rb')
+    print("Getting latest firmware from fujinet.online..")
+    print(fujinet_version_info(), end = '')
+    firmware = open_downloadable_binary(ESP32_DEFAULT_FIRMWARE)
 
     chip = detect_chip(port, args.esp8266, args.esp32)
     info = read_chip_info(chip)
@@ -169,8 +157,8 @@ def run_esphomeflasher(argv):
     print("Done! Flashing is complete!")
     print()
 
-    if args.upload_baud_rate != 115200:
-        stub_chip._port.baudrate = 115200
+    if args.upload_baud_rate != 921600:
+        stub_chip._port.baudrate = 921600
         time.sleep(0.05)  # get rid of crap sent during baud rate change
         stub_chip._port.flushInput()
 
