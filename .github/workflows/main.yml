@@ -111,9 +111,9 @@ jobs:
       - name: Remove Extra Binary
         run: rm dist/FujiNet-Flasher
       - name: Set binary permissions
-        run: chmod a+x dist/FujiNet-Flasher.app/Contents/MacOS/Fujinet-Flasher
+        run: chmod +x dist/FujiNet-Flasher.app/Contents/MacOS/Fujinet-Flasher
       - name: See dist directory
-        run: ls -al dist
+        run: ls -alR dist
       - uses: actions/upload-artifact@master
         with:
           name: FujiNet-Flasher_macos
