@@ -110,8 +110,10 @@ jobs:
           python -m PyInstaller.__main__ -F -w -n FujiNet-Flasher -i icon.icns esphomeflasher/__main__.py
       - name: Remove Extra Binary
         run: rm dist/FujiNet-Flasher
+      - name: Set binary permissions
+        run: chmod a+x dist/FujiNet-Flasher.app/Contents/MacOS/Fujinet-Flasher
       - name: See dist directory
-        run: ls dist
+        run: ls -al dist
       - uses: actions/upload-artifact@master
         with:
           name: FujiNet-Flasher_macos
