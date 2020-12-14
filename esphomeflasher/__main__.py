@@ -94,6 +94,7 @@ def run_esphomeflasher(argv):
         show_logs(serial_port)
         return
 
+    print("Starting firmware upgrade...")
     print("Getting latest firmware from fujinet.online..")
     print(fujinet_version_info(), end = '')
     firmware = open_downloadable_binary(ESP32_DEFAULT_FIRMWARE)
