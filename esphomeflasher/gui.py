@@ -368,14 +368,47 @@ class MainFrame(wx.Frame):
         self.choice.Bind(wx.EVT_CHOICE, on_select_port)
         bmp = Reload.GetBitmap()
         reload_button = wx.BitmapButton(panel, id=wx.ID_ANY, bitmap=bmp,
-                                        size=(bmp.GetWidth() + 7, bmp.GetHeight() + 7))
+                                        size=(bmp.GetWidth() + 8, bmp.GetHeight() + 8))
         reload_button.Bind(wx.EVT_BUTTON, on_reload)
         reload_button.SetToolTip("Reload serial device list")
 
         serial_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
-        serial_boxsizer.Add(self.choice, 1, wx.EXPAND)
+        serial_boxsizer.Add(self.choice, 1, wx.ALIGN_CENTER)
         # serial_boxsizer.AddStretchSpacer(0)
         serial_boxsizer.Add(reload_button, 0, wx.EXPAND | wx.LEFT, 4)
+
+        # Platform selection
+        self.platform_choice = wx.Choice(panel)
+        self.platform_choice.Disable()
+        self.platform_choice.Bind(wx.EVT_CHOICE, on_platform_selected)
+
+        # Firmware selection
+        select_label = wx.StaticText(panel, label="Firmware selection:")
+        self.firmware_choice = wx.Choice(panel)
+        self.firmware_choice.Disable()
+        self.firmware_choice.Bind(wx.EVT_CHOICE, on_release_selected)
+
+        # Reload platforms
+        platform_get_btn = wx.BitmapButton(panel, id=wx.ID_ANY, bitmap=bmp,
+                                           size=(bmp.GetWidth() + 8, bmp.GetHeight() + 8))
+        platform_get_btn.SetToolTip("Reload platforms and firmware releases")
+        platform_get_btn.Bind(wx.EVT_BUTTON, lambda evt: download_platforms())
+
+        # Reload releases
+        # firmware_get_btn = wx.BitmapButton(panel, id=wx.ID_ANY, bitmap=bmp,
+        #                                    size=(bmp.GetWidth() + 7, bmp.GetHeight() + 7))
+        # firmware_get_btn.SetToolTip("Reload firmware list")
+        # firmware_get_btn.Bind(wx.EVT_BUTTON, lambda evt: download_releases())
+
+        release_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        release_sizer.Add(self.platform_choice, 1, wx.ALIGN_CENTER)
+        release_sizer.Add(self.firmware_choice, 2, wx.ALIGN_CENTER | wx.LEFT, 4)
+        # release_sizer.Add(firmware_get_btn, 0, wx.EXPAND | wx.LEFT, 4)
+        release_sizer.Add(platform_get_btn, 0, wx.EXPAND | wx.LEFT, 4)
+        self.Connect(self.EVT_DOWNLOAD_PLATFORMS, -1, RemoteFileEvent.event_type, on_platforms_downloaded)
+        self.Connect(self.EVT_DOWNLOAD_RELEASES, -1, RemoteFileEvent.event_type, on_releases_downloaded)
+        self.Connect(self.EVT_DOWNLOAD_FIRMWARE, -1, RemoteFileEvent.event_type, on_firmware_downloaded)
+
 
         # Flash firmware
         self.flash_btn = wx.Button(panel, -1, "Flash FujiNet Firmware")
@@ -385,35 +418,6 @@ class MainFrame(wx.Frame):
         # Serial debug
         logs_button = wx.Button(panel, -1, "Serial Debug Output")
         logs_button.Bind(wx.EVT_BUTTON, on_logs_clicked)
-
-        # Platform selection
-        self.platform_choice = wx.Choice(panel)
-        self.platform_choice.SetSelection(0)
-        self.platform_choice.Bind(wx.EVT_CHOICE, on_platform_selected)
-        platform_get_btn = wx.BitmapButton(panel, id=wx.ID_ANY, bitmap=bmp,
-                                           size=(bmp.GetWidth() + 7, bmp.GetHeight() + 7))
-        platform_get_btn.SetToolTip("Reload platforms and firmware releases")
-        platform_get_btn.Bind(wx.EVT_BUTTON, lambda evt: download_platforms())
-
-        # Firmware selection
-        select_label = wx.StaticText(panel, label="Firmware selection:")
-        self.firmware_choice = wx.Choice(panel)
-        self.firmware_choice.Disable()
-        self.firmware_choice.Bind(wx.EVT_CHOICE, on_release_selected)
-        # firmware_get_btn = wx.BitmapButton(panel, id=wx.ID_ANY, bitmap=bmp,
-        #                                    size=(bmp.GetWidth() + 7, bmp.GetHeight() + 7))
-        # firmware_get_btn.SetToolTip("Reload firmware list")
-        # firmware_get_btn.Bind(wx.EVT_BUTTON, lambda evt: download_releases())
-
-        release_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        release_sizer.Add(self.platform_choice, 1, wx.EXPAND)
-        # release_sizer.Add(platform_get_btn, 0, wx.EXPAND | wx.LEFT, 4)
-        release_sizer.Add(self.firmware_choice, 2, wx.EXPAND | wx.LEFT, 4)  #16)
-        # release_sizer.Add(firmware_get_btn, 0, wx.EXPAND | wx.LEFT, 4)
-        release_sizer.Add(platform_get_btn, 0, wx.EXPAND | wx.LEFT, 4)
-        self.Connect(self.EVT_DOWNLOAD_PLATFORMS, -1, RemoteFileEvent.event_type, on_platforms_downloaded)
-        self.Connect(self.EVT_DOWNLOAD_RELEASES, -1, RemoteFileEvent.event_type, on_releases_downloaded)
-        self.Connect(self.EVT_DOWNLOAD_FIRMWARE, -1, RemoteFileEvent.event_type, on_firmware_downloaded)
 
         # Platform info
         # platform_info_label = wx.StaticText(panel, label="Platform:")
@@ -435,13 +439,13 @@ class MainFrame(wx.Frame):
 
         fgs.AddMany([
             # Port selection row
-            port_label, (serial_boxsizer, 1, wx.EXPAND),
+            (port_label, 0, wx.ALIGN_CENTRE_VERTICAL), (serial_boxsizer, 1, wx.EXPAND),
             # Platform / Firmware selection
-            select_label, (release_sizer, 1, wx.EXPAND),
+            (select_label, 0, wx.ALIGN_CENTRE_VERTICAL), (release_sizer, 1, wx.EXPAND),
             # Platform information
             wx.StaticText(panel, label=""), (self.platform_info_text, 1, wx.EXPAND),
             # Firmware version information
-            fw_info_label, (self.firmware_info_text, 1, wx.EXPAND),
+            (fw_info_label, 0, wx.ALIGN_TOP), (self.firmware_info_text, 1, wx.EXPAND),
             # Flash ESP button
             wx.StaticText(panel, label=""), (self.flash_btn, 1, wx.EXPAND),
             # Debug output button
@@ -457,8 +461,9 @@ class MainFrame(wx.Frame):
         # window close event
         self.Bind(wx.EVT_CLOSE, on_close)
 
-        # start with download once window is created
-        self.console_ctrl.Bind(wx.EVT_WINDOW_CREATE, lambda evt: download_platforms())
+        # download list of platforms
+        # TODO: better, stdout redirect to console_ctrl does not work immediately 
+        wx.CallLater(200, download_platforms)
 
     def _get_serial_ports(self):
         ports = []
