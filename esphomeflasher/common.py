@@ -130,12 +130,19 @@ def read_firmware_info(firmware):
     return flash_mode, flash_freq
 
 
+def is_url(path):
+    if isinstance(path, str):
+        return HTTP_REGEX.match(path) is not None
+    else:
+        return False
+
+
 def open_downloadable_binary(path):
     if hasattr(path, 'seek'):
         path.seek(0)
         return path
 
-    if HTTP_REGEX.match(path) is not None:
+    if is_url(path):
         import requests
 
         try:
@@ -148,9 +155,7 @@ def open_downloadable_binary(path):
             raise EsphomeflasherError(
                 "Error while retrieving firmware file '{}': {}".format(path, err))
 
-        binary = io.BytesIO()
-        binary.write(response.content)
-        binary.seek(0)
+        binary = io.BytesIO(response.content)
         return binary
 
     try:
@@ -158,21 +163,18 @@ def open_downloadable_binary(path):
     except IOError as err:
         raise EsphomeflasherError("Error opening binary '{}': {}".format(path, err))
 
-def fujinet_version_info():
-    from urllib.request import urlopen
 
-    data = urlopen(FUJINET_VERSION_URL)
-    version = ""
-    counter = 0
+def open_binary_from_zip(zipfile, path):
+    with zipfile.open(path, 'r') as f:
+        binary = io.BytesIO(f.read())
+    return binary
 
-    for line in data:
-        if counter < 3:
-            version += line.decode('us-ascii')
-            counter += 1
-        else:
-            break
 
-    return version
+def fujinet_version_info(path):
+    f = open_downloadable_binary(path)
+    info = ''.join([ln.decode('us-ascii') for ln in f.readlines()[:3]])
+    return info
+
 
 def format_bootloader_path(path, flash_mode, flash_freq):
     return path.replace('$FLASH_MODE$', flash_mode).replace('$FLASH_FREQ$', flash_freq)
@@ -191,8 +193,9 @@ def configure_write_flash_args(info, firmware_path, flash_size,
         if flash_freq in ('26m', '20m'):
             raise EsphomeflasherError(
                 "No bootloader available for flash frequency {}".format(flash_freq))
-        bootloader = open_downloadable_binary(
-            format_bootloader_path(bootloader_path, flash_mode, flash_freq))
+        # bootloader = open_downloadable_binary(
+        #     format_bootloader_path(bootloader_path, flash_mode, flash_freq))
+        bootloader = open_downloadable_binary(bootloader_path)
         partitions = open_downloadable_binary(partitions_path)
         otadata = open_downloadable_binary(otadata_path)
         spiffs = open_downloadable_binary(spiffs_path)

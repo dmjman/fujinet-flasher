@@ -1,13 +1,23 @@
 import re
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 
-ESP32_DEFAULT_BOOTLOADER_FORMAT = 'https://fujinet.online/firmware/bootloader.bin'
-ESP32_DEFAULT_OTA_DATA = 'https://fujinet.online/firmware/boot_app0.bin'
-ESP32_DEFAULT_PARTITIONS = 'https://fujinet.online/firmware/partitions.bin'
-ESP32_DEFAULT_FIRMWARE = 'https://fujinet.online/firmware/firmware.bin'
-ESP32_DEFAULT_SPIFFS = 'https://fujinet.online/firmware/spiffs.bin'
-FUJINET_VERSION_URL = 'https://fujinet.online/firmware-dl/version_info.txt'
+FUJINET_PLATFORMS_URL = "https://fujinet.online/firmware-dl/platforms.json"
+
+ESP32_DEFAULT_BOOTLOADER_FORMAT = "bootloader.bin"
+ESP32_DEFAULT_OTA_DATA = "boot_app0.bin"
+ESP32_DEFAULT_PARTITIONS = "partitions.bin"
+ESP32_DEFAULT_SPIFFS = "spiffs.bin"
+ESP32_DEFAULT_FIRMWARE = "firmware.bin"
+FUJINET_VERSION_INFO = "version_info.txt"
+
+FUJINET_VERSION_URL = "https://fujinet.online/firmware-dl/" + FUJINET_VERSION_INFO
+FUJINET_FIRMWARE_BASE_URL = "https://fujinet.online/firmware/"
+ESP32_DEFAULT_BOOTLOADER_FORMAT_URL = FUJINET_FIRMWARE_BASE_URL + ESP32_DEFAULT_BOOTLOADER_FORMAT
+ESP32_DEFAULT_OTA_DATA_URL = FUJINET_FIRMWARE_BASE_URL + ESP32_DEFAULT_OTA_DATA
+ESP32_DEFAULT_PARTITIONS_URL = FUJINET_FIRMWARE_BASE_URL + ESP32_DEFAULT_PARTITIONS
+ESP32_DEFAULT_SPIFFS_URL = FUJINET_FIRMWARE_BASE_URL + ESP32_DEFAULT_SPIFFS
+ESP32_DEFAULT_FIRMWARE_URL = FUJINET_FIRMWARE_BASE_URL + ESP32_DEFAULT_FIRMWARE
 
 # https://stackoverflow.com/a/3809435/8924614
 HTTP_REGEX = re.compile(r'https?://(www\.)?[-a-zA-Z0-9@:%._+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_+.~#?&/=]*)')

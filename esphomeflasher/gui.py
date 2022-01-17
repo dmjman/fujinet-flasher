@@ -2,6 +2,9 @@
 import re
 import sys
 import threading
+import io
+
+from urllib.parse import urljoin
 
 import wx
 import wx.adv
@@ -9,8 +12,17 @@ from wx.lib.embeddedimage import PyEmbeddedImage
 import wx.lib.inspection
 import wx.lib.mixins.inspection
 
+from esphomeflasher.__main__ import run_esphomeflasher_kwargs
 from esphomeflasher.helpers import list_serial_ports
 from esphomeflasher.common import fujinet_version_info
+
+from esphomeflasher.const import FUJINET_PLATFORMS_URL
+from esphomeflasher.remoteFile import RemoteFile, RemoteFileEvent, flush_cache
+import esphomeflasher.fnPlatform as fnPlatform
+import esphomeflasher.fnRelease as fnRelease
+
+from typing import Union
+from typing import List
 
 
 COLOR_RE = re.compile(r'(?:\033)(?:\[(.*?)[@-~]|\].*?(?:\007|\033\\))')
@@ -146,34 +158,54 @@ class RedirectText:
 
 
 class FlashingThread(threading.Thread):
-    def __init__(self, parent, firmware, port, show_logs=False):
+    def __init__(self, **kwargs):
         threading.Thread.__init__(self)
         self.daemon = True
-        self._parent = parent
-        self._firmware = firmware
-        self._port = port
-        self._show_logs = show_logs
+        self.kwargs = kwargs
 
     def run(self):
         try:
-            from esphomeflasher.__main__ import run_esphomeflasher
-
-            argv = ['esphomeflasher', '--port', self._port, self._firmware]
-            if self._show_logs:
-                argv.append('--show-logs')
-            run_esphomeflasher(argv)
+            run_esphomeflasher_kwargs(**self.kwargs)
         except Exception as e:
             print("Unexpected error: {}".format(e))
             raise
 
 
+# class DetectFirmwareThread(threading.Thread):
+#     def __init__(self, port):
+#         threading.Thread.__init__(self)
+#         self.daemon = True
+#         self._port = port
+
+#     def run(self):
+#         try:
+#             from esphomeflasher.__main__ import detect_current_firmware
+#             argv = ['--port', self._port]
+#             detect_current_firmware(argv)
+#         except Exception as e:
+#             print("Unexpected error: {}".format(e))
+#             raise
+
+
 class MainFrame(wx.Frame):
+    EVT_DOWNLOAD_PLATFORMS = wx.NewId()
+    EVT_DOWNLOAD_RELEASES = wx.NewId()
+    EVT_DOWNLOAD_FIRMWARE = wx.NewId()
+
     def __init__(self, parent, title):
         wx.Frame.__init__(self, parent, -1, title, size=(725, 650),
                           style=wx.DEFAULT_FRAME_STYLE | wx.NO_FULL_REPAINT_ON_RESIZE)
 
         self._firmware = None
         self._port = None
+
+        self.platforms: List[fnPlatform.FujiNetPlatform] = []
+        self.platforms_rf = RemoteFile(FUJINET_PLATFORMS_URL, self, self.EVT_DOWNLOAD_PLATFORMS)
+        self.chosen_platform: Union[None, fnPlatform.FujiNetPlatform] = None
+        self.releases: List[fnRelease.FujiNetRelease] = []
+        self.releases_rf: Union[None, RemoteFile] = None
+        self.chosen_release: Union[None, fnRelease.FujiNetRelease] = None
+        self.firmware_rf: Union[None, RemoteFile] = None
 
         self._init_ui()
 
@@ -184,18 +216,138 @@ class MainFrame(wx.Frame):
         self.Show(True)
 
     def _init_ui(self):
+        def on_close(event):
+            # cancel threads, if any
+            self.platforms_rf.cancel()
+            if self.releases_rf is not None:
+                self.releases_rf.cancel()
+            if self.firmware_rf is not None:
+                self.firmware_rf.cancel()
+            self.Destroy()
+
         def on_reload(event):
             self.choice.SetItems(self._get_serial_ports())
 
-        def on_clicked(event):
+        def on_flash_btn(event):
             self.console_ctrl.SetValue("")
-            worker = FlashingThread(self, self._firmware, self._port)
-            worker.start()
+            download_firmware()
 
         def on_logs_clicked(event):
             self.console_ctrl.SetValue("")
-            worker = FlashingThread(self, 'dummy', self._port, show_logs=True)
+            worker = FlashingThread(port=self._port, show_logs=True)
             worker.start()
+
+        def download_platforms():
+            # flush cached entries
+            flush_cache()
+            # reset platforms
+            self.platforms = []
+            self.chosen_platform = None
+            self.platform_info_text.SetLabel("")
+            self.platform_choice.Disable()
+            self.platform_choice.Set(["Loading platforms ..."])
+            self.platform_choice.SetSelection(0)
+            # reset releases
+            self.releases = []
+            self.chosen_release = None
+            self.firmware_choice.Disable()
+            self.firmware_choice.Set([""])
+            self.firmware_choice.SetSelection(0)
+            update_firmware_info_text(None)
+            self.flash_btn.Disable()
+            # get platforms file
+            self.platforms_rf.get(use_cache=True)
+
+        def on_platforms_downloaded(evt: RemoteFileEvent):
+            # print("on_platforms_downloaded")
+            if evt.remote_file.status == RemoteFile.STATUS_OK:
+                self.platforms = fnPlatform.loads(evt.remote_file.data)
+                self.platform_choice.Set(["-- Select Platform --"]+[p.name for p in self.platforms])
+                self.platform_choice.SetSelection(0)
+                self.platform_choice.Enable()
+
+        def on_platform_selected(evt: wx.CommandEvent):
+            s = evt.GetSelection()
+            if 0 < s <= len(self.platforms):
+                self.chosen_platform = self.platforms[s-1]
+                # print("build platform:", self.chosen_platform.build)
+                self.platform_info_text.SetLabel(self.chosen_platform.description)
+                download_releases()
+            else:
+                self.chosen_platform = None
+                self.platform_info_text.SetLabel("")
+                self.firmware_choice.Disable()
+                self.firmware_choice.Set([""])
+                self.firmware_choice.SetSelection(0)
+                update_firmware_info_text(None)
+                self.flash_btn.Disable()
+                self.chosen_release = None
+
+        def download_releases():
+            if self.chosen_platform is None:
+                return
+            self.firmware_choice.Disable()
+            self.firmware_choice.Set(["Loading firmware list ..."])
+            self.firmware_choice.SetSelection(0)
+            update_firmware_info_text(None)
+            self.flash_btn.Disable()
+            self.releases = []
+            self.chosen_release = None
+            self.flash_btn.Disable()
+            url = urljoin(FUJINET_PLATFORMS_URL, self.chosen_platform.url)
+            if self.releases_rf is not None:
+                self.releases_rf.cancel()
+            self.releases_rf = RemoteFile(url, self, self.EVT_DOWNLOAD_RELEASES)
+            self.releases_rf.get(use_cache=True)
+
+        def on_releases_downloaded(evt: RemoteFileEvent):
+            if evt.remote_file.status == RemoteFile.STATUS_OK:
+                self.releases = fnRelease.loads(
+                    evt.remote_file.data, self.chosen_platform.build, self.chosen_platform.name)
+                choices = ["-- Select Firmware --"]
+                if self.chosen_platform is not None:
+                    choices.extend([
+                        r.version for r in self.releases
+                    ])
+                self.firmware_choice.Set(choices)
+                self.firmware_choice.SetSelection(0)
+                self.firmware_choice.Enable()
+
+        def on_release_selected(evt: wx.CommandEvent):
+            s = evt.GetSelection()
+            if 0 < s <= len(self.releases):
+                self.chosen_release = self.releases[s-1]
+                # print("firmware version:", self.chosen_release.named_version)
+                update_firmware_info_text(self.chosen_release.info_text)
+                self.flash_btn.Enable()
+            else:
+                self.chosen_release = None
+                update_firmware_info_text(None)
+                self.flash_btn.Disable()
+
+        def update_firmware_info_text(text=None):
+            self.firmware_info_text.SetLabel("\n"*5 if text is None else text)
+
+        def download_firmware():
+            if self.chosen_platform is None or self.chosen_release is None:
+                return
+            print("Retrieving firmware")
+            url = urljoin(self.releases_rf.url, self.chosen_release.url)
+            if self.firmware_rf is not None:
+                self.firmware_rf.cancel()
+            self.firmware_rf = RemoteFile(url, self, self.EVT_DOWNLOAD_FIRMWARE)
+            self.firmware_rf.get()
+
+        def on_firmware_downloaded(evt: RemoteFileEvent):
+            if evt.remote_file.status == RemoteFile.STATUS_OK:
+                checksum = self.firmware_rf.sha256
+                ok = self.chosen_release.sha256.lower() == checksum.lower()
+                print("sha256 {} {}".format(checksum, "OK" if ok else "CHECKSUM ERROR"))
+                if not ok:
+                    return
+                package = io.BytesIO(self.firmware_rf.data)
+                worker = FlashingThread(port=self._port, binary=package, package=True)
+                worker.start()
 
         def on_select_port(event):
             choice = event.GetEventObject()
@@ -210,6 +362,8 @@ class MainFrame(wx.Frame):
 
         fgs = wx.FlexGridSizer(7, 2, 10, 10)
 
+        # Serial port
+        port_label = wx.StaticText(panel, label="Serial port:")
         self.choice = wx.Choice(panel, choices=self._get_serial_ports())
         self.choice.Bind(wx.EVT_CHOICE, on_select_port)
         bmp = Reload.GetBitmap()
@@ -220,15 +374,58 @@ class MainFrame(wx.Frame):
 
         serial_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
         serial_boxsizer.Add(self.choice, 1, wx.EXPAND)
-        serial_boxsizer.AddStretchSpacer(0)
-        serial_boxsizer.Add(reload_button, 0, 0, 20)
+        # serial_boxsizer.AddStretchSpacer(0)
+        serial_boxsizer.Add(reload_button, 0, wx.EXPAND | wx.LEFT, 4)
 
-        button = wx.Button(panel, -1, "Flash FujiNet Firmware")
-        button.Bind(wx.EVT_BUTTON, on_clicked)
+        # Flash firmware
+        self.flash_btn = wx.Button(panel, -1, "Flash FujiNet Firmware")
+        self.flash_btn.Bind(wx.EVT_BUTTON, on_flash_btn)
+        self.flash_btn.Disable()
 
+        # Serial debug
         logs_button = wx.Button(panel, -1, "Serial Debug Output")
         logs_button.Bind(wx.EVT_BUTTON, on_logs_clicked)
 
+        # Platform selection
+        self.platform_choice = wx.Choice(panel)
+        self.platform_choice.SetSelection(0)
+        self.platform_choice.Bind(wx.EVT_CHOICE, on_platform_selected)
+        platform_get_btn = wx.BitmapButton(panel, id=wx.ID_ANY, bitmap=bmp,
+                                           size=(bmp.GetWidth() + 7, bmp.GetHeight() + 7))
+        platform_get_btn.SetToolTip("Reload platforms and firmware releases")
+        platform_get_btn.Bind(wx.EVT_BUTTON, lambda evt: download_platforms())
+
+        # Firmware selection
+        select_label = wx.StaticText(panel, label="Firmware selection:")
+        self.firmware_choice = wx.Choice(panel)
+        self.firmware_choice.Disable()
+        self.firmware_choice.Bind(wx.EVT_CHOICE, on_release_selected)
+        # firmware_get_btn = wx.BitmapButton(panel, id=wx.ID_ANY, bitmap=bmp,
+        #                                    size=(bmp.GetWidth() + 7, bmp.GetHeight() + 7))
+        # firmware_get_btn.SetToolTip("Reload firmware list")
+        # firmware_get_btn.Bind(wx.EVT_BUTTON, lambda evt: download_releases())
+
+        release_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        release_sizer.Add(self.platform_choice, 1, wx.EXPAND)
+        # release_sizer.Add(platform_get_btn, 0, wx.EXPAND | wx.LEFT, 4)
+        release_sizer.Add(self.firmware_choice, 2, wx.EXPAND | wx.LEFT, 4)  #16)
+        # release_sizer.Add(firmware_get_btn, 0, wx.EXPAND | wx.LEFT, 4)
+        release_sizer.Add(platform_get_btn, 0, wx.EXPAND | wx.LEFT, 4)
+        self.Connect(self.EVT_DOWNLOAD_PLATFORMS, -1, RemoteFileEvent.event_type, on_platforms_downloaded)
+        self.Connect(self.EVT_DOWNLOAD_RELEASES, -1, RemoteFileEvent.event_type, on_releases_downloaded)
+        self.Connect(self.EVT_DOWNLOAD_FIRMWARE, -1, RemoteFileEvent.event_type, on_firmware_downloaded)
+
+        # Platform info
+        # platform_info_label = wx.StaticText(panel, label="Platform:")
+        self.platform_info_text = wx.StaticText(panel, label="")
+
+        # Firmware info
+        fw_info_label = wx.StaticText(panel, label="Firmware:")
+        self.firmware_info_text = wx.StaticText(panel)
+        update_firmware_info_text(None)
+
+        # Log window
+        console_label = wx.StaticText(panel, label="Console:")
         self.console_ctrl = wx.TextCtrl(panel, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
         self.console_ctrl.SetFont(wx.Font((0, 13), wx.FONTFAMILY_TELETYPE, wx.FONTSTYLE_NORMAL,
                                           wx.FONTWEIGHT_NORMAL))
@@ -236,26 +433,32 @@ class MainFrame(wx.Frame):
         self.console_ctrl.SetForegroundColour(wx.WHITE)
         self.console_ctrl.SetDefaultStyle(wx.TextAttr(wx.WHITE))
 
-        port_label = wx.StaticText(panel, label="Serial port:")
-        version_label = wx.StaticText(panel, label="Latest Version:")
-        console_label = wx.StaticText(panel, label="Console:")
-
         fgs.AddMany([
             # Port selection row
             port_label, (serial_boxsizer, 1, wx.EXPAND),
+            # Platform / Firmware selection
+            select_label, (release_sizer, 1, wx.EXPAND),
+            # Platform information
+            wx.StaticText(panel, label=""), (self.platform_info_text, 1, wx.EXPAND),
             # Firmware version information
-            version_label, (wx.StaticText(panel, label=fujinet_version_info())),
+            fw_info_label, (self.firmware_info_text, 1, wx.EXPAND),
             # Flash ESP button
-            (wx.StaticText(panel, label="")), (button, 1, wx.EXPAND),
+            wx.StaticText(panel, label=""), (self.flash_btn, 1, wx.EXPAND),
             # Debug output button
-            (wx.StaticText(panel, label="")), (logs_button, 1, wx.EXPAND),
+            wx.StaticText(panel, label=""), (logs_button, 1, wx.EXPAND),
             # Console View (growable)
             (console_label, 1, wx.EXPAND), (self.console_ctrl, 1, wx.EXPAND),
         ])
-        fgs.AddGrowableRow(4, 1)
+        fgs.AddGrowableRow(6, 1)
         fgs.AddGrowableCol(1, 1)
         hbox.Add(fgs, proportion=2, flag=wx.ALL | wx.EXPAND, border=15)
         panel.SetSizer(hbox)
+
+        # window close event
+        self.Bind(wx.EVT_CLOSE, on_close)
+
+        # start with download once window is created
+        self.console_ctrl.Bind(wx.EVT_WINDOW_CREATE, lambda evt: download_platforms())
 
     def _get_serial_ports(self):
         ports = []
