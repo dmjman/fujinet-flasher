@@ -116,9 +116,9 @@ jobs:
         run: ls -alR dist
       - name: Tar files
         run: |
-		  cd dist
-		  tar -cvf ../FujiNet-Flasher_macos_latest.tar *
-		  cd ..
+          cd dist
+          tar -cvf ../FujiNet-Flasher_macos_latest.tar *
+          cd ..
       - name: Upload Artifact
         uses: actions/upload-artifact@master
         with:
@@ -127,7 +127,7 @@ jobs:
 
   build-macos-mavericks:
     runs-on: macOS-latest
-	env:
+    env:
       # We need the official Python, because the GA ones only support newer macOS versions
       # The deployment target is picked up by the Python build tools automatically
       PYTHON_VERSION: 3.9.1
@@ -161,9 +161,9 @@ jobs:
         run: ls -alR dist
       - name: Tar files
         run: |
-		  cd dist
-		  tar -cvf ../FujiNet-Flasher_macos_mavericks.tar *
-		  cd ..
+          cd dist
+          tar -cvf ../FujiNet-Flasher_macos_mavericks.tar *
+          cd ..
       - name: Upload Artifact
         uses: actions/upload-artifact@master
         with:
