@@ -158,6 +158,10 @@ class RedirectText(io.TextIOBase):
     def writable(self):
         return True
 
+    # esptool >=3 handles output differently if the output stream is a TTY
+    def isatty(self):
+        return False
+
 
 class FlashingThread(threading.Thread):
     def __init__(self, **kwargs):
