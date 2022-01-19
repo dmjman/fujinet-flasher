@@ -373,8 +373,7 @@ class MainFrame(wx.Frame):
         self.choice = wx.Choice(panel, choices=self._get_serial_ports())
         self.choice.Bind(wx.EVT_CHOICE, on_select_port)
         bmp = Reload.GetBitmap()
-        reload_button = wx.BitmapButton(panel, id=wx.ID_ANY, bitmap=bmp,
-                                        size=(bmp.GetWidth() + 8, bmp.GetHeight() + 8))
+        reload_button = wx.BitmapButton(panel, id=wx.ID_ANY, bitmap=bmp)
         reload_button.Bind(wx.EVT_BUTTON, on_reload)
         reload_button.SetToolTip("Reload serial device list")
 
@@ -384,19 +383,18 @@ class MainFrame(wx.Frame):
         serial_boxsizer.Add(reload_button, 0, wx.EXPAND | wx.LEFT, 4)
 
         # Platform selection
-        self.platform_choice = wx.Choice(panel)
+        self.platform_choice = wx.Choice(panel, choices=[""])
         self.platform_choice.Disable()
         self.platform_choice.Bind(wx.EVT_CHOICE, on_platform_selected)
 
         # Firmware selection
         select_label = wx.StaticText(panel, label="Firmware selection:")
-        self.firmware_choice = wx.Choice(panel)
+        self.firmware_choice = wx.Choice(panel, choices=[""])
         self.firmware_choice.Disable()
         self.firmware_choice.Bind(wx.EVT_CHOICE, on_release_selected)
 
         # Reload platforms
-        platform_get_btn = wx.BitmapButton(panel, id=wx.ID_ANY, bitmap=bmp,
-                                           size=(bmp.GetWidth() + 8, bmp.GetHeight() + 8))
+        platform_get_btn = wx.BitmapButton(panel, id=wx.ID_ANY, bitmap=bmp)
         platform_get_btn.SetToolTip("Reload platforms and firmware releases")
         platform_get_btn.Bind(wx.EVT_BUTTON, lambda evt: download_platforms())
 
