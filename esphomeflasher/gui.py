@@ -405,8 +405,8 @@ class MainFrame(wx.Frame):
         # firmware_get_btn.Bind(wx.EVT_BUTTON, lambda evt: download_releases())
 
         release_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        release_sizer.Add(self.platform_choice, 1, wx.ALIGN_CENTER)
-        release_sizer.Add(self.firmware_choice, 2, wx.ALIGN_CENTER | wx.LEFT, 4)
+        release_sizer.Add(self.platform_choice, 2, wx.ALIGN_CENTER)
+        release_sizer.Add(self.firmware_choice, 3, wx.ALIGN_CENTER | wx.LEFT, 4)
         # release_sizer.Add(firmware_get_btn, 0, wx.EXPAND | wx.LEFT, 4)
         release_sizer.Add(platform_get_btn, 0, wx.EXPAND | wx.LEFT, 4)
         self.Connect(self.EVT_DOWNLOAD_PLATFORMS, -1, RemoteFileEvent.event_type, on_platforms_downloaded)
