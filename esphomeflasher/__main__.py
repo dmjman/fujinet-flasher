@@ -5,6 +5,8 @@ from datetime import datetime
 import sys
 import time
 import zipfile
+import json
+
 from esphomeflasher.common import open_downloadable_binary, open_binary_from_zip
 from esphomeflasher.common import fujinet_version_info, is_url
 
@@ -13,14 +15,12 @@ import serial
 
 from esphomeflasher import const
 from esphomeflasher.common import ESP32ChipInfo, EsphomeflasherError, chip_run_stub, \
-    configure_write_flash_args, detect_chip, detect_flash_size, read_chip_info
+    configure_write_flash_args, detect_chip, detect_flash_size, read_chip_info, \
+    read_firmware_info, MockEsptoolArgs
 from esphomeflasher.const import ESP32_DEFAULT_BOOTLOADER_FORMAT, ESP32_DEFAULT_OTA_DATA, \
-    ESP32_DEFAULT_PARTITIONS, ESP32_DEFAULT_FIRMWARE, ESP32_DEFAULT_SPIFFS, FUJINET_VERSION_INFO
+    ESP32_DEFAULT_PARTITIONS, ESP32_DEFAULT_FIRMWARE, ESP32_DEFAULT_SPIFFS, \
+    FUJINET_VERSION_INFO, FUJINET_RELEASE_INFO
 from esphomeflasher.helpers import list_serial_ports
-
-# import re
-# FN_VERSION_RE = re.compile(r'FujiNet\s+(\S+)\s+([^ ]+ \S+).*Started')
-
 
 def parse_args(argv):
     parser = argparse.ArgumentParser(prog='esphomeflasher {}'.format(const.__version__))
@@ -55,7 +55,6 @@ def parse_args(argv):
 
     return parser.parse_args(argv[1:])
 
-
 def select_port(args):
     if args.port is not None:
         print(u"Using '{}' as serial port.".format(args.port))
@@ -71,7 +70,6 @@ def select_port(args):
         raise EsphomeflasherError
     print(u"Auto-detected serial port: {}".format(ports[0][0]))
     return ports[0][0]
-
 
 def show_logs(serial_port):
     print("Showing logs:")
@@ -90,7 +88,6 @@ def show_logs(serial_port):
                 print(message)
             except UnicodeEncodeError:
                 print(message.encode('ascii', 'backslashreplace'))
-
 
 # def detect_current_firmware(argv):
 #     args = parse_args(argv)
@@ -132,14 +129,12 @@ def show_logs(serial_port):
 #             print("Build Time: ", match.group(2))
 #             break
 
-
 def run_esphomeflasher(argv):
     """run esphomeflasher with command line arguments"""
     # parse arguments
     args = parse_args(argv)
     # run flasher
     return run_esphomeflasher_args(args)
-
 
 def run_esphomeflasher_kwargs(**kwargs):
     """run esphomeflasher with key=value,... arguments"""
@@ -163,7 +158,6 @@ def run_esphomeflasher_kwargs(**kwargs):
     # run flasher
     return run_esphomeflasher_args(args)
 
-
 def run_esphomeflasher_args(args):
     """run esphomeflasher with Namespace args object"""
     port = select_port(args)
@@ -180,16 +174,24 @@ def run_esphomeflasher_args(args):
         # args.binary is zip file
         package = open_downloadable_binary(args.binary)
         zf = zipfile.ZipFile(package, 'r')
-        firmware = open_binary_from_zip(zf, ESP32_DEFAULT_FIRMWARE)
-        bootloader = open_binary_from_zip(zf, ESP32_DEFAULT_BOOTLOADER_FORMAT)
-        partitions = open_binary_from_zip(zf, ESP32_DEFAULT_PARTITIONS)
-        otadata = open_binary_from_zip(zf, ESP32_DEFAULT_OTA_DATA)
-        spiffs = open_binary_from_zip(zf, ESP32_DEFAULT_SPIFFS)
-        try:
-            version_info = open_binary_from_zip(zf, FUJINET_VERSION_INFO)
-            print(fujinet_version_info(version_info), end='')
-        except KeyError:
-            print("Missing {} in zip".format(FUJINET_VERSION_INFO))
+        addr_filename = []
+        release_info = json.load(open_binary_from_zip(zf, FUJINET_RELEASE_INFO))
+        filecount = 0
+        # Get all the partition files ready
+        for f in release_info['files']:
+            fname = f['filename'][:len(f['filename']) - 4]
+            thisfile = open_downloadable_binary(open_binary_from_zip(zf, f['filename']))
+            addr_filename.append((int(f['offset'], 16), thisfile))
+            # Verify "firmware" magic # and grab flash mode/frequency
+            if fname == 'firmware':
+                flash_mode, flash_freq = read_firmware_info(thisfile)
+            filecount += 1
+            print("File " + format(filecount) + ": " + format(f['filename']) + ", Offset: " + format(f['offset']))
+
+        # Display firmware details
+        print("FujiNet Version: {}".format(release_info['version']))
+        print("Version Date: {}".format(release_info['version_date']))
+        print("GIT Commit: {}".format(release_info['git_commit']))
         zf.close()
     else:
         firmware, bootloader, partitions, otadata, spiffs = \
@@ -225,8 +227,7 @@ def run_esphomeflasher_args(args):
     flash_size = detect_flash_size(stub_chip)
     print(" - Flash Size: {}".format(flash_size))
 
-    mock_args = configure_write_flash_args(info, firmware, flash_size,
-                                           bootloader, partitions, otadata, spiffs)
+    mock_args = MockEsptoolArgs(flash_size, addr_filename, flash_mode, flash_freq)
 
     print(" - Flash Mode: {}".format(mock_args.flash_mode))
     print(" - Flash Frequency: {}Hz".format(mock_args.flash_freq.upper()))
@@ -260,7 +261,6 @@ def run_esphomeflasher_args(args):
 
     show_logs(stub_chip._port)
 
-
 def main():
     try:
         if len(sys.argv) <= 1:
@@ -275,7 +275,6 @@ def main():
         return 1
     except KeyboardInterrupt:
         return 1
-
 
 if __name__ == "__main__":
     sys.exit(main())

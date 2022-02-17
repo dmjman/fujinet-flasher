@@ -1,6 +1,6 @@
 import io
 import struct
-
+import json
 import esptool
 
 from esphomeflasher.const import HTTP_REGEX
@@ -175,40 +175,14 @@ def fujinet_version_info(path):
     info = ''.join([ln.decode('us-ascii') for ln in f.readlines()[:3]])
     return info
 
-
 def format_bootloader_path(path, flash_mode, flash_freq):
     return path.replace('$FLASH_MODE$', flash_mode).replace('$FLASH_FREQ$', flash_freq)
 
-
+# No longer used
 def configure_write_flash_args(info, firmware_path, flash_size,
                                bootloader_path, partitions_path,
                                otadata_path, spiffs_path):
-    addr_filename = []
-    
-    firmware = open_downloadable_binary(firmware_path)
-
-    # print(" - Firware path: fujinet.online")
-    flash_mode, flash_freq = read_firmware_info(firmware)
-    if isinstance(info, ESP32ChipInfo):
-        if flash_freq in ('26m', '20m'):
-            raise EsphomeflasherError(
-                "No bootloader available for flash frequency {}".format(flash_freq))
-        # bootloader = open_downloadable_binary(
-        #     format_bootloader_path(bootloader_path, flash_mode, flash_freq))
-        bootloader = open_downloadable_binary(bootloader_path)
-        partitions = open_downloadable_binary(partitions_path)
-        otadata = open_downloadable_binary(otadata_path)
-        spiffs = open_downloadable_binary(spiffs_path)
-
-        addr_filename.append((0x1000, bootloader))
-        addr_filename.append((0x8000, partitions))
-        addr_filename.append((0xE000, otadata))
-        addr_filename.append((0x10000, firmware))
-        addr_filename.append((0xC10000, spiffs))
-    else:
-        addr_filename.append((0x0, firmware))
-    return MockEsptoolArgs(flash_size, addr_filename, flash_mode, flash_freq)
-
+    return 0
 
 def detect_chip(port, force_esp8266=False, force_esp32=False):
     if force_esp8266 or force_esp32:

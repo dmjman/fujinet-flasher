@@ -10,6 +10,7 @@ ESP32_DEFAULT_PARTITIONS = "partitions.bin"
 ESP32_DEFAULT_SPIFFS = "spiffs.bin"
 ESP32_DEFAULT_FIRMWARE = "firmware.bin"
 FUJINET_VERSION_INFO = "version_info.txt"
+FUJINET_RELEASE_INFO = "release.json"
 
 FUJINET_VERSION_URL = "https://fujinet.online/firmware-dl/" + FUJINET_VERSION_INFO
 FUJINET_FIRMWARE_BASE_URL = "https://fujinet.online/firmware/"
