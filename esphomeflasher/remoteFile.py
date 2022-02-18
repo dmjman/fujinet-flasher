@@ -130,7 +130,6 @@ class RemoteFileThread(threading.Thread):
             print("Unexpected error: {}".format(e))
         else:
             # print("Download completed({})".format(self.remote_file.status))
-            print("Done")
             if self.remote_file.use_cache:
                 # print("cache update")
                 cache.set(self.remote_file.url, self.remote_file.data)

@@ -200,8 +200,7 @@ class MainFrame(wx.Frame):
     EVT_DOWNLOAD_FIRMWARE = wx.NewId()
 
     def __init__(self, parent, title):
-        wx.Frame.__init__(self, parent, -1, title, size=(725, 650),
-                          style=wx.DEFAULT_FRAME_STYLE | wx.NO_FULL_REPAINT_ON_RESIZE)
+        wx.Frame.__init__(self, parent, -1, title, style=wx.DEFAULT_FRAME_STYLE | wx.NO_FULL_REPAINT_ON_RESIZE)
 
         self._firmware = None
         self._port = None
@@ -218,7 +217,14 @@ class MainFrame(wx.Frame):
 
         sys.stdout = RedirectText(self.console_ctrl)
 
-        self.SetMinSize((640, 480))
+        # HiDPI friendly attempt
+        w, h = self.GetTextExtent("MMMMMMMMMM")
+        if w >= 240: f = 2.0
+        elif w >= 180: f = 1.5
+        elif w >= 150: f = 1.25
+        else: f = 1.0
+        self.SetClientSize((int(725*f),int(650*f)))
+        self.SetMinClientSize((int(640*f), int(480*f)))
         self.Centre(wx.BOTH)
         self.Show(True)
 
@@ -438,8 +444,10 @@ class MainFrame(wx.Frame):
         # Log window
         console_label = wx.StaticText(panel, label="Console:")
         self.console_ctrl = wx.TextCtrl(panel, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
-        self.console_ctrl.SetFont(wx.Font((0, 13), wx.FONTFAMILY_TELETYPE, wx.FONTSTYLE_NORMAL,
-                                          wx.FONTWEIGHT_NORMAL))
+        font = wx.Font()
+        font.SetFamily(wx.FONTFAMILY_TELETYPE)
+        font.SetPointSize(10)
+        self.console_ctrl.SetFont(font)
         self.console_ctrl.SetBackgroundColour(wx.BLACK)
         self.console_ctrl.SetForegroundColour(wx.WHITE)
         self.console_ctrl.SetDefaultStyle(wx.TextAttr(wx.WHITE))
