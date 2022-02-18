@@ -12,7 +12,7 @@ import wx.adv
 from wx.lib.embeddedimage import PyEmbeddedImage
 import wx.lib.inspection
 import wx.lib.mixins.inspection
-from wx.lib.wordwrap import wordwrap
+# from wx.lib.wordwrap import wordwrap
 
 from esphomeflasher.__main__ import run_esphomeflasher_kwargs
 from esphomeflasher.helpers import list_serial_ports
@@ -333,8 +333,9 @@ class MainFrame(wx.Frame):
                 self.flash_btn.Disable()
 
         def update_firmware_info_text(text=None):
-            self.firmware_info_text.SetLabel(wordwrap("\n"*5 if text is None else text, 580, wx.ClientDC(self.firmware_info_text)))
-#            self.firmware_info_text.Wrap(self.GetSize()[0])
+            # self.firmware_info_text.SetLabel(wordwrap("\n"*5 if text is None else text, 580, wx.ClientDC(self.firmware_info_text)))
+            self.firmware_info_text.SetLabel("\n"*5 if text is None else text)
+            self.firmware_info_text.Wrap(self.GetClientSize().Width - select_label.GetSize().Width - 32)
 
         def download_firmware():
             if self.chosen_platform is None or self.chosen_release is None:

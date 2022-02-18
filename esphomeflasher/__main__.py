@@ -173,29 +173,37 @@ def run_esphomeflasher_args(args):
     if args.package:
         # args.binary is zip file
         package = open_downloadable_binary(args.binary)
-        zf = zipfile.ZipFile(package, 'r')
         addr_filename = []
-        release_info = json.load(open_binary_from_zip(zf, FUJINET_RELEASE_INFO))
         filecount = 0
-        # Get all the partition files ready
-        for f in release_info['files']:
-            fname = f['filename'][:len(f['filename']) - 4]
-            thisfile = open_downloadable_binary(open_binary_from_zip(zf, f['filename']))
-            addr_filename.append((int(f['offset'], 16), thisfile))
-            # Verify "firmware" magic # and grab flash mode/frequency
-            if fname == 'firmware':
-                flash_mode, flash_freq = read_firmware_info(thisfile)
-            filecount += 1
-            print("File " + format(filecount) + ": " + format(f['filename']) + ", Offset: " + format(f['offset']))
-
+        firmware = None
+        with zipfile.ZipFile(package, 'r') as zf:
+            release_info = json.load(open_binary_from_zip(zf, FUJINET_RELEASE_INFO))
+            # Get all the partition files ready
+            for file_entry in release_info.get('files', []):
+                file_name = file_entry.get('filename')
+                file_offset = file_entry.get('offset')
+                if file_name is None or file_offset is None:
+                    raise EsphomeflasherError("Invalid release info. Missing mandatory file attributes!")
+                file_obj = open_binary_from_zip(zf, file_name)
+                offset = int(file_offset, 16)
+                addr_filename.append((offset, file_obj))
+                if file_name.split(".", 1)[0].lower() == 'firmware':
+                    firmware = file_obj
+                filecount += 1
+                print("File {}: {}, Offset: 0x{:04X}".format(filecount, file_name, offset))
         # Display firmware details
-        print("FujiNet Version: {}".format(release_info['version']))
-        print("Version Date: {}".format(release_info['version_date']))
-        print("GIT Commit: {}".format(release_info['git_commit']))
-        zf.close()
+        print("FujiNet Version: {}".format(release_info.get('version', "")))
+        print("Version Date: {}".format(release_info.get('version_date', "")))
+        print("Git Commit: {}".format(release_info.get('git_commit', "")))
     else:
         firmware, bootloader, partitions, otadata, spiffs = \
             args.binary, args.bootloader, args.partitions, args.otadata, args.spiffs
+
+    # Verify "firmware" magic # and grab flash mode/frequency
+    if firmware:
+        flash_mode, flash_freq = read_firmware_info(firmware)
+    else:
+        raise EsphomeflasherError("Invalid release info. Missing firmware file!")
 
     chip = detect_chip(port, args.esp8266, args.esp32)
     info = read_chip_info(chip)
