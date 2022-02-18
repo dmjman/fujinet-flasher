@@ -26,31 +26,13 @@ def parse_args(argv):
     parser = argparse.ArgumentParser(prog='esphomeflasher {}'.format(const.__version__))
     parser.add_argument('-p', '--port',
                         help="Select the USB/COM port for uploading.")
-    group = parser.add_mutually_exclusive_group(required=False)
-    group.add_argument('--esp8266', action='store_true')
-    group.add_argument('--esp32', action='store_true')
-    group.add_argument('--upload-baud-rate', type=int, default=460800,
+    parser.add_argument('--upload-baud-rate', type=int, default=460800,
                        help="Baud rate to upload with (not for logging)")
-    parser.add_argument('--bootloader',
-                        help="(ESP32-only) The bootloader to flash.",
-                        default=ESP32_DEFAULT_BOOTLOADER_FORMAT)
-    parser.add_argument('--partitions',
-                        help="(ESP32-only) The partitions to flash.",
-                        default=ESP32_DEFAULT_PARTITIONS)
-    parser.add_argument('--otadata',
-                        help="(ESP32-only) The otadata file to flash.",
-                        default=ESP32_DEFAULT_OTA_DATA)
-    parser.add_argument('--spiffs',
-                        help="(ESP32-only) The SPIFFS file to flash.",
-                        default=ESP32_DEFAULT_SPIFFS)
     parser.add_argument('--no-erase',
                         help="Do not erase flash before flashing",
                         action='store_true')
     parser.add_argument('--show-logs', help="Only show logs", action='store_true')
-    parser.add_argument('--package', help="Flag to indicate the binary is a firmware package (zip which contains "
-                                          "firmware, bootloader, partitions, SPIFFS and OTA data).",
-                        action='store_true')
-    parser.add_argument('binary', help="The binary image to flash.",
+    parser.add_argument('package', help="The package (zip file or URL) which contains files to flash.",
                         default=ESP32_DEFAULT_FIRMWARE)
 
     return parser.parse_args(argv[1:])
@@ -89,46 +71,6 @@ def show_logs(serial_port):
             except UnicodeEncodeError:
                 print(message.encode('ascii', 'backslashreplace'))
 
-# def detect_current_firmware(argv):
-#     args = parse_args(argv)
-#     port = select_port(args)
-#     serial_port = serial.Serial(port, baudrate=921600)
-
-#     print("Checking for current firmware version:")
-
-#     # chip = detect_chip(port, args.esp8266, args.esp32)
-#     # print("Resetting...")
-#     # chip.hard_reset()
-#     # chip.soft_reset(True)
-#     print("Reset FujiNet now (button C)")
-
-#     count = 1
-#     with serial_port:
-#         while True:
-#             try:
-#                 raw = serial_port.readline()
-#             except serial.SerialException:
-#                 print("Serial port closed!")
-#                 return
-#             text = raw.decode(errors='ignore')
-#             line = text.replace('\r', '').replace('\n', '')
-#             # message = line
-#             # try:
-#             #     print(message)
-#             # except UnicodeEncodeError:
-#             #     print(message.encode('ascii', 'backslashreplace'))
-#             # count += 1
-#             match = FN_VERSION_RE.match(text)
-#             if match is None:
-#                 if count < 50:
-#                     continue
-#                 print("Unable to detect current firmware version.")
-#                 break
-#             # TODO:
-#             print("Detected Version: ", match.group(1))
-#             print("Build Time: ", match.group(2))
-#             break
-
 def run_esphomeflasher(argv):
     """run esphomeflasher with command line arguments"""
     # parse arguments
@@ -141,17 +83,9 @@ def run_esphomeflasher_kwargs(**kwargs):
     # prepare args
     args_dct = {
         'port': None,
-        'esp8266': False,
-        'esp32': False,
         'upload_baud_rate': 460800,
-        'bootloader': ESP32_DEFAULT_BOOTLOADER_FORMAT,
-        'partitions': ESP32_DEFAULT_PARTITIONS,
-        'otadata': ESP32_DEFAULT_OTA_DATA,
-        'spiffs': ESP32_DEFAULT_SPIFFS,
         'no_erase': False,
         'show_logs': False,
-        'package': False,
-        'binary': ESP32_DEFAULT_FIRMWARE
     }
     args_dct.update(kwargs)
     args = argparse.Namespace(**args_dct)
@@ -167,37 +101,35 @@ def run_esphomeflasher_args(args):
         return
 
     print("Starting firmware upgrade...")
-    if is_url(args.binary):
-        print("Getting firmware: {}".format(args.binary))
+    if is_url(args.package):
+        print("Getting firmware: {}".format(args.package))
 
-    if args.package:
-        # args.binary is zip file
-        package = open_downloadable_binary(args.binary)
-        addr_filename = []
-        filecount = 0
-        firmware = None
-        with zipfile.ZipFile(package, 'r') as zf:
-            release_info = json.load(open_binary_from_zip(zf, FUJINET_RELEASE_INFO))
-            # Get all the partition files ready
-            for file_entry in release_info.get('files', []):
-                file_name = file_entry.get('filename')
-                file_offset = file_entry.get('offset')
-                if file_name is None or file_offset is None:
-                    raise EsphomeflasherError("Invalid release info. Missing mandatory file attributes!")
-                file_obj = open_binary_from_zip(zf, file_name)
-                offset = int(file_offset, 16)
-                addr_filename.append((offset, file_obj))
-                if file_name.split(".", 1)[0].lower() == 'firmware':
-                    firmware = file_obj
-                filecount += 1
-                print("File {}: {}, Offset: 0x{:04X}".format(filecount, file_name, offset))
-        # Display firmware details
-        print("FujiNet Version: {}".format(release_info.get('version', "")))
-        print("Version Date: {}".format(release_info.get('version_date', "")))
-        print("Git Commit: {}".format(release_info.get('git_commit', "")))
-    else:
-        firmware, bootloader, partitions, otadata, spiffs = \
-            args.binary, args.bootloader, args.partitions, args.otadata, args.spiffs
+    # open local file or download remote file
+    package = open_downloadable_binary(args.package)
+
+    addr_filename = []
+    filecount = 0
+    firmware = None
+    # package is zip file
+    with zipfile.ZipFile(package, 'r') as zf:
+        release_info = json.load(open_binary_from_zip(zf, FUJINET_RELEASE_INFO))
+        # Get all the partition files ready
+        for file_entry in release_info.get('files', []):
+            file_name = file_entry.get('filename')
+            file_offset = file_entry.get('offset')
+            if file_name is None or file_offset is None:
+                raise EsphomeflasherError("Invalid release info. Missing mandatory file attributes!")
+            file_obj = open_binary_from_zip(zf, file_name)
+            offset = int(file_offset, 16)
+            addr_filename.append((offset, file_obj))
+            if file_name.split(".", 1)[0].lower() == 'firmware':
+                firmware = file_obj
+            filecount += 1
+            print("File {}: {}, Offset: 0x{:04X}".format(filecount, file_name, offset))
+    # Display firmware details
+    print("FujiNet Version: {}".format(release_info.get('version', "")))
+    print("Version Date: {}".format(release_info.get('version_date', "")))
+    print("Git Commit: {}".format(release_info.get('git_commit', "")))
 
     # Verify "firmware" magic # and grab flash mode/frequency
     if firmware:
@@ -205,7 +137,7 @@ def run_esphomeflasher_args(args):
     else:
         raise EsphomeflasherError("Invalid release info. Missing firmware file!")
 
-    chip = detect_chip(port, args.esp8266, args.esp32)
+    chip = detect_chip(port, force_esp32=True)
     info = read_chip_info(chip)
 
     print()

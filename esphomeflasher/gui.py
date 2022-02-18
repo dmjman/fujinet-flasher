@@ -178,22 +178,6 @@ class FlashingThread(threading.Thread):
             raise
 
 
-# class DetectFirmwareThread(threading.Thread):
-#     def __init__(self, port):
-#         threading.Thread.__init__(self)
-#         self.daemon = True
-#         self._port = port
-
-#     def run(self):
-#         try:
-#             from esphomeflasher.__main__ import detect_current_firmware
-#             argv = ['--port', self._port]
-#             detect_current_firmware(argv)
-#         except Exception as e:
-#             print("Unexpected error: {}".format(e))
-#             raise
-
-
 class MainFrame(wx.Frame):
     EVT_DOWNLOAD_PLATFORMS = wx.NewId()
     EVT_DOWNLOAD_RELEASES = wx.NewId()
@@ -361,7 +345,7 @@ class MainFrame(wx.Frame):
                 if not ok:
                     return
                 package = io.BytesIO(self.firmware_rf.data)
-                worker = FlashingThread(port=self._port, binary=package, package=True)
+                worker = FlashingThread(port=self._port, package=package)
                 worker.start()
 
         def on_select_port(event):
