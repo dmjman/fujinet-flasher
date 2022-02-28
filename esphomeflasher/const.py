@@ -2,7 +2,7 @@ import re
 
 __version__ = "1.3.0"
 
-FUJINET_PLATFORMS_URL = "https://fujinet.online/firmware-dl/platforms.json"
+FUJINET_PLATFORMS_URL = "https://fujinet.online/firmware/platforms.json"
 
 ESP32_DEFAULT_BOOTLOADER_FORMAT = "bootloader.bin"
 ESP32_DEFAULT_OTA_DATA = "boot_app0.bin"
@@ -12,7 +12,7 @@ ESP32_DEFAULT_FIRMWARE = "firmware.bin"
 FUJINET_VERSION_INFO = "version_info.txt"
 FUJINET_RELEASE_INFO = "release.json"
 
-FUJINET_VERSION_URL = "https://fujinet.online/firmware-dl/" + FUJINET_VERSION_INFO
+FUJINET_VERSION_URL = "https://fujinet.online/firmware/" + FUJINET_VERSION_INFO
 FUJINET_FIRMWARE_BASE_URL = "https://fujinet.online/firmware/"
 ESP32_DEFAULT_BOOTLOADER_FORMAT_URL = FUJINET_FIRMWARE_BASE_URL + ESP32_DEFAULT_BOOTLOADER_FORMAT
 ESP32_DEFAULT_OTA_DATA_URL = FUJINET_FIRMWARE_BASE_URL + ESP32_DEFAULT_OTA_DATA
