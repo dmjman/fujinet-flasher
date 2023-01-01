@@ -1,4 +1,4 @@
-attrdict
+attrdict3
 wxpython>=4.1.1,<5.0
 esptool==3.0
 requests>=2.24.0,<3
