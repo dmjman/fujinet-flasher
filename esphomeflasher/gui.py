@@ -188,6 +188,7 @@ class MainFrame(wx.Frame):
 
         self._firmware = None
         self._port = None
+        self._upload_baud_rate = 460800
 
         self.platforms: List[fnPlatform.FujiNetPlatform] = []
         self.platforms_rf = RemoteFile(FUJINET_PLATFORMS_URL, self, self.EVT_DOWNLOAD_PLATFORMS)
@@ -223,7 +224,7 @@ class MainFrame(wx.Frame):
             self.Destroy()
 
         def on_reload(event):
-            self.choice.SetItems(self._get_serial_ports())
+            self.port_choice.SetItems(self._get_serial_ports())
 
         def on_flash_btn(event):
             self.console_ctrl.SetValue("")
@@ -231,7 +232,7 @@ class MainFrame(wx.Frame):
 
         def on_logs_clicked(event):
             self.console_ctrl.SetValue("")
-            worker = FlashingThread(port=self._port, show_logs=True)
+            worker = FlashingThread(port=self._port, upload_baud_rate=self._upload_baud_rate, show_logs=True)
             worker.start()
 
         def download_platforms():
@@ -345,12 +346,16 @@ class MainFrame(wx.Frame):
                 if not ok:
                     return
                 package = io.BytesIO(self.firmware_rf.data)
-                worker = FlashingThread(port=self._port, package=package)
+                worker = FlashingThread(port=self._port, upload_baud_rate=self._upload_baud_rate, package=package)
                 worker.start()
 
         def on_select_port(event):
             choice = event.GetEventObject()
             self._port = choice.GetString(choice.GetSelection())
+
+        def on_select_baud(event):
+            b = event.GetEventObject()
+            self._upload_baud_rate = b.GetString(b.GetSelection())
 
         def on_pick_file(event):
             self._firmware = event.GetPath().replace("'", "")
@@ -359,21 +364,48 @@ class MainFrame(wx.Frame):
 
         hbox = wx.BoxSizer(wx.HORIZONTAL)
 
-        fgs = wx.FlexGridSizer(7, 2, 10, 10)
+        fgs = wx.FlexGridSizer(8, 2, 10, 10)
 
         # Serial port
         port_label = wx.StaticText(panel, label="Serial port:")
-        self.choice = wx.Choice(panel, choices=self._get_serial_ports())
-        self.choice.Bind(wx.EVT_CHOICE, on_select_port)
+        self.port_choice = wx.Choice(panel, choices=self._get_serial_ports())
+        self.port_choice.Bind(wx.EVT_CHOICE, on_select_port)
         bmp = Reload.GetBitmap()
         reload_button = wx.BitmapButton(panel, id=wx.ID_ANY, bitmap=bmp)
         reload_button.Bind(wx.EVT_BUTTON, on_reload)
         reload_button.SetToolTip("Reload serial device list")
 
         serial_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
-        serial_boxsizer.Add(self.choice, 1, wx.ALIGN_CENTER)
+        serial_boxsizer.Add(self.port_choice, 1, wx.ALIGN_CENTER)
         # serial_boxsizer.AddStretchSpacer(0)
         serial_boxsizer.Add(reload_button, 0, wx.EXPAND | wx.LEFT, 4)
+
+        # BAUD Rate
+        baud_label = wx.StaticText(panel, label="Baud Rate:")
+        self.baud_choice = wx.Choice(panel, choices=[
+            "921600",
+            "576000",
+            "460800",
+            "230400",
+            "115200",
+            "76800",
+            "57600",
+            "38400",
+            "28800",
+            "19200",
+            "9600",
+            "4800",
+            "2400",
+            "1800",
+            "1200",
+            "600",
+            "300"
+            ]
+        )
+        self.baud_choice.SetStringSelection("460800")
+        self.baud_choice.Bind(wx.EVT_CHOICE, on_select_baud)
+        baud_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
+        baud_boxsizer.Add(self.baud_choice, 1, wx.ALIGN_CENTER)
 
         # Platform selection
         self.platform_choice = wx.Choice(panel, choices=[""])
@@ -439,6 +471,8 @@ class MainFrame(wx.Frame):
         fgs.AddMany([
             # Port selection row
             (port_label, 0, wx.ALIGN_CENTRE_VERTICAL), (serial_boxsizer, 1, wx.EXPAND),
+            # Baud selection row
+            (baud_label, 0, wx.ALIGN_CENTRE_VERTICAL), (baud_boxsizer, 1, wx.EXPAND),
             # Platform / Firmware selection
             (select_label, 0, wx.ALIGN_CENTRE_VERTICAL), (release_sizer, 1, wx.EXPAND),
             # Platform information
@@ -452,7 +486,7 @@ class MainFrame(wx.Frame):
             # Console View (growable)
             (console_label, 1, wx.EXPAND), (self.console_ctrl, 1, wx.EXPAND),
         ])
-        fgs.AddGrowableRow(6, 1)
+        fgs.AddGrowableRow(7, 1)
         fgs.AddGrowableCol(1, 1)
         hbox.Add(fgs, proportion=2, flag=wx.ALL | wx.EXPAND, border=15)
         panel.SetSizer(hbox)

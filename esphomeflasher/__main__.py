@@ -53,6 +53,11 @@ def select_port(args):
     print(u"Auto-detected serial port: {}".format(ports[0][0]))
     return ports[0][0]
 
+def select_baud(args):
+    if args.upload_baud_rate is not None:
+        print(u"Using '{}' as baud rate.".format(args.upload_baud_rate))
+        return args.upload_baud_rate
+
 def show_logs(serial_port):
     print("Showing logs:")
     with serial_port:
@@ -95,8 +100,10 @@ def run_esphomeflasher_kwargs(**kwargs):
 def run_esphomeflasher_args(args):
     """run esphomeflasher with Namespace args object"""
     port = select_port(args)
+    baud = select_baud(args)
+
     if args.show_logs:
-        serial_port = serial.Serial(port, baudrate=921600)
+        serial_port = serial.Serial(port, baud)
         show_logs(serial_port)
         return
 
@@ -194,10 +201,8 @@ def run_esphomeflasher_args(args):
     print("Done! Flashing is complete!")
     print()
 
-    if args.upload_baud_rate != 921600:
-        stub_chip._port.baudrate = 921600
-        time.sleep(0.05)  # get rid of crap sent during baud rate change
-        stub_chip._port.flushInput()
+    time.sleep(0.05)
+    stub_chip._port.flushInput()
 
     show_logs(stub_chip._port)
 
