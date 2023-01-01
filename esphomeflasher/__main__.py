@@ -16,7 +16,7 @@ import serial
 from esphomeflasher import const
 from esphomeflasher.common import ESP32ChipInfo, EsphomeflasherError, chip_run_stub, \
     configure_write_flash_args, detect_chip, detect_flash_size, read_chip_info, \
-    read_firmware_info, MockEsptoolArgs
+    read_firmware_info, check_flash_size, MockEsptoolArgs
 from esphomeflasher.const import ESP32_DEFAULT_BOOTLOADER_FORMAT, ESP32_DEFAULT_OTA_DATA, \
     ESP32_DEFAULT_PARTITIONS, ESP32_DEFAULT_FIRMWARE, ESP32_DEFAULT_SPIFFS, \
     FUJINET_VERSION_INFO, FUJINET_RELEASE_INFO
@@ -131,6 +131,8 @@ def run_esphomeflasher_args(args):
             addr_filename.append((offset, file_obj))
             if file_name.split(".", 1)[0].lower() == 'firmware':
                 firmware = file_obj
+            if file_name.split(".", 1)[0].lower() == 'spiffs':
+                spiffs_start = offset
             filecount += 1
             print("File {}: {}, Offset: 0x{:04X}".format(filecount, file_name, offset))
     # Display firmware details
@@ -171,8 +173,9 @@ def run_esphomeflasher_args(args):
         except esptool.FatalError as err:
             raise EsphomeflasherError("Error changing ESP upload baud rate: {}".format(err))
 
-    flash_size = detect_flash_size(stub_chip)
-    print(" - Flash Size: {}".format(flash_size))
+    flash_size = check_flash_size(stub_chip, spiffs_start)
+    if not flash_size:
+        raise EsphomeflasherError("Firmware larger than chip flash, stopping!")
 
     mock_args = MockEsptoolArgs(flash_size, addr_filename, flash_mode, flash_freq)
 

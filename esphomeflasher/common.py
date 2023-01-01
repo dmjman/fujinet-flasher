@@ -114,6 +114,20 @@ def detect_flash_size(stub_chip):
     flash_id = read_chip_property(stub_chip.flash_id)
     return esptool.DETECTED_FLASH_SIZES.get(flash_id >> 16, '4MB')
 
+def check_flash_size(stub_chip, offset):
+    spiffs_offset = round(offset / 1024)
+    flash_id = read_chip_property(stub_chip.flash_id)
+    counter = 1
+    for f in range(18, 25):
+        if f == (flash_id >> 16):
+            size = 256 * counter
+            print("Flash Size: {}KB, SPIFFS Offset: {}KB".format(size, spiffs_offset))
+            if size < spiffs_offset:
+                return False
+            else:
+                return esptool.DETECTED_FLASH_SIZES.get(flash_id >> 16, '4MB')
+        counter = counter * 2
+        f += 1
 
 def read_firmware_info(firmware):
     header = firmware.read(4)
