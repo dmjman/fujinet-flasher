@@ -70,7 +70,7 @@ jobs:
         run: |
           sudo apt update
           sudo apt install libgtk-3-dev libnotify-dev libsdl2-dev
-          pip uninstall setuptools
+          pip uninstall --yes setuptools
 #          pip install attrdict3
 #          pip install -U \
 #           -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-18.04 \
