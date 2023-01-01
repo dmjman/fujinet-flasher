@@ -355,7 +355,7 @@ class MainFrame(wx.Frame):
 
         def on_select_baud(event):
             b = event.GetEventObject()
-            self._upload_baud_rate = b.GetString(b.GetSelection())
+            self._upload_baud_rate = int(b.GetString(b.GetSelection()))
 
         def on_pick_file(event):
             self._firmware = event.GetPath().replace("'", "")
