@@ -6,6 +6,7 @@ import threading
 import io
 
 from urllib.parse import urljoin
+from urllib.request import urlopen
 
 import wx
 import wx.adv
@@ -19,6 +20,8 @@ from esphomeflasher.helpers import list_serial_ports
 from esphomeflasher.common import fujinet_version_info
 
 from esphomeflasher.const import FUJINET_PLATFORMS_URL
+from esphomeflasher.const import __version__
+from esphomeflasher.const import FUJINET_FLASHER_VERSION_URL
 from esphomeflasher.remoteFile import RemoteFile, RemoteFileEvent, flush_cache
 import esphomeflasher.fnPlatform as fnPlatform
 import esphomeflasher.fnRelease as fnRelease
@@ -360,11 +363,23 @@ class MainFrame(wx.Frame):
         def on_pick_file(event):
             self._firmware = event.GetPath().replace("'", "")
 
+        def version_check():
+            f = urlopen(FUJINET_FLASHER_VERSION_URL)
+            current_ver = f.read().decode('utf-8').strip()
+            if __version__ != current_ver:
+                self.flasher_ver_text.SetLabel("This version of FujiNet-Flasher is old, Please Update ({}->{})\n at https://fujinet.online/download".format(__version__, current_ver))
+            else:
+                self.flasher_ver_text.SetLabel("FujiNet-Flasher Version {}".format(__version__))
+
         panel = wx.Panel(self)
 
         hbox = wx.BoxSizer(wx.HORIZONTAL)
 
-        fgs = wx.FlexGridSizer(8, 2, 10, 10)
+        fgs = wx.FlexGridSizer(9, 2, 10, 10)
+
+        # Version check notification
+        self.flasher_ver_text = wx.StaticText(panel)
+        version_check()
 
         # Serial port
         port_label = wx.StaticText(panel, label="Serial port:")
@@ -469,6 +484,8 @@ class MainFrame(wx.Frame):
         self.console_ctrl.SetDefaultStyle(wx.TextAttr(wx.WHITE))
 
         fgs.AddMany([
+            # Version check notification row
+            wx.StaticText(panel, label=""), (self.flasher_ver_text, 1, wx.EXPAND),
             # Port selection row
             (port_label, 0, wx.ALIGN_CENTRE_VERTICAL), (serial_boxsizer, 1, wx.EXPAND),
             # Baud selection row
@@ -486,7 +503,7 @@ class MainFrame(wx.Frame):
             # Console View (growable)
             (console_label, 1, wx.EXPAND), (self.console_ctrl, 1, wx.EXPAND),
         ])
-        fgs.AddGrowableRow(7, 1)
+        fgs.AddGrowableRow(8, 1)
         fgs.AddGrowableCol(1, 1)
         hbox.Add(fgs, proportion=2, flag=wx.ALL | wx.EXPAND, border=15)
         panel.SetSizer(hbox)
