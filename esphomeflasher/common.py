@@ -3,6 +3,10 @@ import struct
 import json
 import esptool
 
+# For MacOS so it finds the certificates
+import os
+os.environ['SSL_CERT_FILE'] = "certifi/cacert.pem"
+
 from esphomeflasher.const import HTTP_REGEX
 from esphomeflasher.const import ESP32_DEFAULT_FIRMWARE
 from esphomeflasher.const import FUJINET_VERSION_URL

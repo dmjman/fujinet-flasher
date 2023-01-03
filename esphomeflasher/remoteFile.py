@@ -1,5 +1,10 @@
 import threading
 import requests
+
+# For MacOS so it finds the certificates
+import os
+os.environ['SSL_CERT_FILE'] = "certifi/cacert.pem"
+
 from typing import Union, Dict
 # import time  # TODO remove, used for tests with time.sleep
 import hashlib
