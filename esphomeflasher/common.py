@@ -5,7 +5,8 @@ import esptool
 
 # For MacOS so it finds the certificates
 import os
-os.environ['SSL_CERT_FILE'] = "certifi/cacert.pem"
+import sys
+os.environ['SSL_CERT_FILE'] = os.path.join(sys._MEIPASS, 'certifi', 'cacert.pem')
 
 from esphomeflasher.const import HTTP_REGEX
 from esphomeflasher.const import ESP32_DEFAULT_FIRMWARE
