@@ -268,6 +268,9 @@ class MainFrame(wx.Frame):
                 self.platform_choice.Enable()
 
         def on_platform_selected(evt: wx.CommandEvent):
+            if self._firmware is not None:
+                file_picker.SetPath("")
+                self._firmware = None
             s = evt.GetSelection()
             if 0 < s <= len(self.platforms):
                 self.chosen_platform = self.platforms[s-1]
@@ -315,6 +318,9 @@ class MainFrame(wx.Frame):
                 self.firmware_choice.Enable()
 
         def on_release_selected(evt: wx.CommandEvent):
+            if self._firmware is not None:
+                file_picker.SetPath("")
+                self._firmware = None
             s = evt.GetSelection()
             if 0 < s <= len(self.releases):
                 self.chosen_release = self.releases[s-1]
@@ -332,14 +338,21 @@ class MainFrame(wx.Frame):
             self.firmware_info_text.Wrap(self.GetClientSize().Width - select_label.GetSize().Width - 32)
 
         def download_firmware():
-            if self.chosen_platform is None or self.chosen_release is None:
-                return
-            print("Retrieving firmware")
-            url = urljoin(self.releases_rf.url, self.chosen_release.url)
-            if self.firmware_rf is not None:
-                self.firmware_rf.cancel()
-            self.firmware_rf = RemoteFile(url, self, self.EVT_DOWNLOAD_FIRMWARE)
-            self.firmware_rf.get()
+            if self._firmware is not None:
+                print("Installing Custom Firmware")
+                package = open(self._firmware, "rb")
+                worker = FlashingThread(port=self._port, upload_baud_rate=self._upload_baud_rate, package=package)
+                worker.start()
+                self._firmware = None
+            else:
+                if self.chosen_platform is None or self.chosen_release is None:
+                    return
+                print("Retrieving firmware")
+                url = urljoin(self.releases_rf.url, self.chosen_release.url)
+                if self.firmware_rf is not None:
+                    self.firmware_rf.cancel()
+                self.firmware_rf = RemoteFile(url, self, self.EVT_DOWNLOAD_FIRMWARE)
+                self.firmware_rf.get()
 
         def on_firmware_downloaded(evt: RemoteFileEvent):
             if evt.remote_file.status == RemoteFile.STATUS_OK:
@@ -362,6 +375,9 @@ class MainFrame(wx.Frame):
 
         def on_pick_file(event):
             self._firmware = event.GetPath().replace("'", "")
+            self.flash_btn.Enable()
+            update_firmware_info_text("Custom Firmware File Selected")
+            self.platform_info_text.SetLabel("")
 
         def version_check():
             f = urlopen(FUJINET_FLASHER_VERSION_URL)
@@ -375,7 +391,7 @@ class MainFrame(wx.Frame):
 
         hbox = wx.BoxSizer(wx.HORIZONTAL)
 
-        fgs = wx.FlexGridSizer(9, 2, 10, 10)
+        fgs = wx.FlexGridSizer(10, 2, 10, 10)
 
         # Version check notification
         self.flasher_ver_text = wx.StaticText(panel)
@@ -390,13 +406,18 @@ class MainFrame(wx.Frame):
         reload_button.Bind(wx.EVT_BUTTON, on_reload)
         reload_button.SetToolTip("Reload serial device list")
 
+        # File Picker
+        file_label = wx.StaticText(panel, label="Custom Firmware File:\n(optional)")
+        file_picker = wx.FilePickerCtrl(panel, style=wx.FLP_USE_TEXTCTRL)
+        file_picker.Bind(wx.EVT_FILEPICKER_CHANGED, on_pick_file)
+
         serial_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
         serial_boxsizer.Add(self.port_choice, 1, wx.ALIGN_CENTER)
         # serial_boxsizer.AddStretchSpacer(0)
         serial_boxsizer.Add(reload_button, 0, wx.EXPAND | wx.LEFT, 4)
 
         # BAUD Rate
-        baud_label = wx.StaticText(panel, label="Baud Rate:")
+        baud_label = wx.StaticText(panel, label="Baud Rate:\n(default 460800)")
         self.baud_choice = wx.Choice(panel, choices=[
             "921600",
             "576000",
@@ -428,7 +449,7 @@ class MainFrame(wx.Frame):
         self.platform_choice.Bind(wx.EVT_CHOICE, on_platform_selected)
 
         # Firmware selection
-        select_label = wx.StaticText(panel, label="Firmware selection:")
+        select_label = wx.StaticText(panel, label="Firmware selection:\n(official releases)")
         self.firmware_choice = wx.Choice(panel, choices=[""])
         self.firmware_choice.Disable()
         self.firmware_choice.Bind(wx.EVT_CHOICE, on_release_selected)
@@ -490,6 +511,8 @@ class MainFrame(wx.Frame):
             (port_label, 0, wx.ALIGN_CENTRE_VERTICAL), (serial_boxsizer, 1, wx.EXPAND),
             # Baud selection row
             (baud_label, 0, wx.ALIGN_CENTRE_VERTICAL), (baud_boxsizer, 1, wx.EXPAND),
+            # Custom Firmware File Selection
+            (file_label, 0, wx.ALIGN_CENTER_VERTICAL), (file_picker, 1, wx.EXPAND),
             # Platform / Firmware selection
             (select_label, 0, wx.ALIGN_CENTRE_VERTICAL), (release_sizer, 1, wx.EXPAND),
             # Platform information
@@ -503,7 +526,7 @@ class MainFrame(wx.Frame):
             # Console View (growable)
             (console_label, 1, wx.EXPAND), (self.console_ctrl, 1, wx.EXPAND),
         ])
-        fgs.AddGrowableRow(8, 1)
+        fgs.AddGrowableRow(9, 1)
         fgs.AddGrowableCol(1, 1)
         hbox.Add(fgs, proportion=2, flag=wx.ALL | wx.EXPAND, border=15)
         panel.SetSizer(hbox)
