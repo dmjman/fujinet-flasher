@@ -1,6 +1,6 @@
 import re
 
-__version__ = "1.4.0"
+__version__ = "1.4.1"
 
 FUJINET_FLASHER_VERSION_URL = "https://fujinet.online/firmware/flasher-current-ver.txt"
 
