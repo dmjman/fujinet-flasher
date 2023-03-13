@@ -1,10 +1,13 @@
 import threading
 import requests
 
-# For MacOS so it finds the certificates
-import os
-import sys
-os.environ['SSL_CERT_FILE'] = os.path.join(sys._MEIPASS, 'certifi', 'cacert.pem')
+try:
+    # For MacOS so it finds the certificates
+    import os
+    import sys
+    os.environ['SSL_CERT_FILE'] = os.path.join(sys._MEIPASS, 'certifi', 'cacert.pem')
+except:
+    pass
 
 from typing import Union, Dict
 # import time  # TODO remove, used for tests with time.sleep
